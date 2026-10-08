@@ -56,3 +56,24 @@ Update routing-service (Subscriber):
 Initialize ActiveMQ JMS TopicSubscriber listening to congestion-topic.
 
 Maintain local state of current congestion level based on incoming topic messages instead of calling GET /congestion over REST.
+
+
+
+
+Stage 4: Resiliency Alerting & Heartbeats (Stretch)
+Goal: Monitor service health and trigger dead-letter/heartbeat alerts when critical components fail.
+
+Target Services: intersection-service, intersection-watchdog (Port 7024)
+
+Action Items
+Update intersection-service (Producer):
+
+Set up a background scheduled task (e.g., using ScheduledExecutorService) to publish periodic heartbeat messages to intersection-heartbeat-queue.
+
+Implement intersection-watchdog (Consumer & Watchdog):
+
+Subscribe to intersection-heartbeat-queue.
+
+Implement a timer window: if no heartbeat is received within the expected interval, trigger an alert state (log critical error or update internal state at GET /alert).
+
+Handle Dead Letter Queue (DLQ) messages for unprocessable heartbeats.
