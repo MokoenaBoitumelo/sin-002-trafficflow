@@ -77,3 +77,8 @@ Subscribe to intersection-heartbeat-queue.
 Implement a timer window: if no heartbeat is received within the expected interval, trigger an alert state (log critical error or update internal state at GET /alert).
 
 Handle Dead Letter Queue (DLQ) messages for unprocessable heartbeats.
+
+
+
+
+Summary Task ChecklistStageService(s)Primary DeliverableMechanismEffort1ingestion-serviceClean intersections-legacy.csv & serve /intersectionsREST GET1–2 hrs2intersection-servicecongestion-servicerouting-serviceSingle Source of Truth + Congestion tracker + Routing calculationsREST inter-service calls2–3 hrs3congestion-servicerouting-servicePublish/subscribe congestion updatesActiveMQ Topic (congestion-topic)1 hr4intersection-serviceintersection-watchdogService health monitoring & failure detectionActiveMQ Queue (intersection-heartbeat-queue)1 hr
