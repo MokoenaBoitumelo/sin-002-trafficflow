@@ -35,3 +35,24 @@ Stage 2: Core Domain Services & Synchronous REST WiringGoal: Implement business 
 
 
 
+Stage 3: Event-Driven Decoupling via ActiveMQ Topic (Stretch)
+Goal: Replace synchronous REST polling between Congestion and Routing with an asynchronous MQ publisher/subscriber model.
+
+Target Services: congestion-service, routing-service, common/
+
+Action Items
+Review Shared Config:
+
+Inspect common/README.md and MqConfig class to obtain ActiveMQ broker URL and topic name (congestion-topic).
+
+Update congestion-service (Publisher):
+
+Initialize ActiveMQ JMS TopicPublisher.
+
+Whenever the congestion level changes, publish a message containing {"level": <0-8>} to congestion-topic.
+
+Update routing-service (Subscriber):
+
+Initialize ActiveMQ JMS TopicSubscriber listening to congestion-topic.
+
+Maintain local state of current congestion level based on incoming topic messages instead of calling GET /congestion over REST.
