@@ -31,7 +31,7 @@
       <artifactId>activemq-client</artifactId>
       <version>5.18.3</version>
     </dependency>
-    <!-- Added Jackson Databind for JSON parsing -->
+    <!-- Added Jackson Databind for JSON mapping -->
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
