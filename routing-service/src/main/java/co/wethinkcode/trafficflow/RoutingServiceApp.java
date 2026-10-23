@@ -56,6 +56,32 @@ public class RoutingServiceApp {
             ctx.json(new RouteEstimate(fromId.toUpperCase(), toId.toUpperCase(), congestionLevel, estimatedMinutes));
         });
     }
+
+    private static boolean validateIntersection(String id) {
+        String url = "http://localhost:7021/intersections/" + id.trim().toUpperCase();
+        try {
+            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(url)).GET().build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            return response.statusCode() == 200;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static int fetchCongestionLevel() {
+        String url = "http://localhost:7022/congestion";
+        try {
+            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(url)).GET().build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                CongestionLevel cl = objectMapper.readValue(response.body(), CongestionLevel.class);
+                return cl.level();
+            }
+        } catch (Exception e) {
+            // Default fallback if congestion service is unreachable
+        }
+        return 0;
+    }
 }
 
 // MQ TODO: subscribes to ActiveMQ topic MqConfig.TOPIC at MqConfig.BROKER_URL (see co.wethinkcode.trafficflow.mq.MqConfig)
