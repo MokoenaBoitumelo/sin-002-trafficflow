@@ -17,6 +17,27 @@ public class CongestionServiceApp {
 
         // TODO (Tracks the city-wide Congestion Level (0-8).)
         // Add domain endpoints for congestion-service here.
+
+        // Get current congestion level
+        app.get("/congestion", ctx -> {
+            ctx.json(new CongestionLevel(currentCongestion.get()));
+        });
+
+        // Update congestion level (0 to 8)
+        app.post("/congestion", ctx -> {
+            try {
+                CongestionLevel payload = ctx.bodyAsClass(CongestionLevel.class);
+                int level = payload.level();
+                if (level < 0 || level > 8) {
+                    ctx.status(400).result("Congestion level must be between 0 and 8.");
+                    return;
+                }
+                currentCongestion.set(level);
+                ctx.json(new CongestionLevel(level));
+            } catch (Exception e) {
+                ctx.status(400).result("Invalid request body. Expected JSON: {\"level\": <0-8>}");
+            }
+        });
     }
 }
 
