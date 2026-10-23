@@ -18,12 +18,31 @@ public class IntersectionServiceApp {
     private static final Map<String, CleanIntersection> intersectionStore = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
+        // Fetch and load intersections on startup
+        loadIntersectionsFromIngestionService();
+
         Javalin app = Javalin.create().start(7021);
 
         app.get("/health", ctx -> ctx.result("OK"));
 
         // TODO (Validates intersection/district names (source of truth).)
         // Add domain endpoints for intersection-service here.
+
+        // Get all intersections
+        app.get("/intersections", ctx -> {
+            ctx.json(new ArrayList<>(intersectionStore.values()));
+        });
+
+        // Get single intersection by ID
+        app.get("/intersections/{id}", ctx -> {
+            String id = ctx.pathParam("id").toUpperCase();
+            CleanIntersection intersection = intersectionStore.get(id);
+            if (intersection == null) {
+                ctx.status(404).result("Intersection not found: " + id);
+            } else {
+                ctx.json(intersection);
+            }
+        });
     }
 }
 
