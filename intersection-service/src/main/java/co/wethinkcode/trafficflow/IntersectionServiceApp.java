@@ -1,8 +1,21 @@
 package co.wethinkcode.trafficflow;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 import io.javalin.Javalin;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
 public class IntersectionServiceApp {
+
+    public record CleanIntersection(String id, String district, String signalType, boolean active) {}
+
+    private static final Map<String, CleanIntersection> intersectionStore = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
         Javalin app = Javalin.create().start(7021);
