@@ -20,11 +20,10 @@ public class RoutingServiceApp {
     private static final HttpClient httpClient = HttpClient.newHttpClient();
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    // In-memory cache for congestion level updated via ActiveMQ topic
+    // In-memory cache updated via ActiveMQ subscription
     private static final AtomicInteger cachedCongestionLevel = new AtomicInteger(0);
 
     public static void main(String[] args) {
-        // Start ActiveMQ subscriber
         initMessageSubscriber();
 
         Javalin app = Javalin.create().start(7023);
@@ -53,10 +52,10 @@ public class RoutingServiceApp {
                 return;
             }
 
-            // 3. Get current congestion level from local cache (updated via ActiveMQ topic)
+            // 3. Retrieve congestion level from local cache (decoupled via ActiveMQ)
             int congestionLevel = cachedCongestionLevel.get();
 
-            // 4. Calculate estimated travel time (Base 10 minutes + congestion multiplier)
+            // 4. Calculate estimated travel time
             double baseMinutes = 10.0;
             double estimatedMinutes = baseMinutes * (1.0 + (congestionLevel * 0.15));
 
@@ -79,7 +78,7 @@ public class RoutingServiceApp {
                         String json = textMessage.getText();
                         CongestionLevel cl = objectMapper.readValue(json, CongestionLevel.class);
                         cachedCongestionLevel.set(cl.level());
-                        System.out.println("Received congestion update from topic. New level: " + cl.level());
+                        System.out.println("Received congestion update from topic. Cached level updated to: " + cl.level());
                     }
                 } catch (Exception e) {
                     System.err.println("Error processing incoming congestion message:");
