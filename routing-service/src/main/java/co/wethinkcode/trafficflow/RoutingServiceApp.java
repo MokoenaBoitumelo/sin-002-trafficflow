@@ -1,12 +1,16 @@
 package co.wethinkcode.trafficflow;
 
+import co.wethinkcode.trafficflow.mq.MqConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.javalin.Javalin;
+import org.apache.activemq.ActiveMQConnectionFactory;
 
+import javax.jms.*;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class RoutingServiceApp {
 
@@ -16,15 +20,18 @@ public class RoutingServiceApp {
     private static final HttpClient httpClient = HttpClient.newHttpClient();
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
+    // In-memory cache for congestion level updated via ActiveMQ topic
+    private static final AtomicInteger cachedCongestionLevel = new AtomicInteger(0);
+
     public static void main(String[] args) {
+        // Start ActiveMQ subscriber
+        initMessageSubscriber();
+
         Javalin app = Javalin.create().start(7023);
 
         app.get("/health", ctx -> ctx.result("OK"));
 
-        // TODO (Provides estimated travel times based on congestion and intersection.)
-        // Add domain endpoints for routing-service here.
-
-        // Estimate route travel time
+        // Estimate route travel time using cached congestion level
         app.get("/routes/estimate", ctx -> {
             String fromId = ctx.queryParam("from");
             String toId = ctx.queryParam("to");
@@ -46,8 +53,8 @@ public class RoutingServiceApp {
                 return;
             }
 
-            // 3. Fetch current congestion level from Congestion Service
-            int congestionLevel = fetchCongestionLevel();
+            // 3. Get current congestion level from local cache (updated via ActiveMQ topic)
+            int congestionLevel = cachedCongestionLevel.get();
 
             // 4. Calculate estimated travel time (Base 10 minutes + congestion multiplier)
             double baseMinutes = 10.0;
@@ -55,6 +62,36 @@ public class RoutingServiceApp {
 
             ctx.json(new RouteEstimate(fromId.toUpperCase(), toId.toUpperCase(), congestionLevel, estimatedMinutes));
         });
+    }
+
+    private static void initMessageSubscriber() {
+        try {
+            ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(MqConfig.BROKER_URL);
+            Connection connection = connectionFactory.createConnection();
+            connection.start();
+            Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+            Destination destination = session.createTopic(MqConfig.TOPIC);
+            MessageConsumer consumer = session.createConsumer(destination);
+
+            consumer.setMessageListener(message -> {
+                try {
+                    if (message instanceof TextMessage textMessage) {
+                        String json = textMessage.getText();
+                        CongestionLevel cl = objectMapper.readValue(json, CongestionLevel.class);
+                        cachedCongestionLevel.set(cl.level());
+                        System.out.println("Received congestion update from topic. New level: " + cl.level());
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error processing incoming congestion message:");
+                    e.printStackTrace();
+                }
+            });
+
+            System.out.println("Subscribed to ActiveMQ topic: " + MqConfig.TOPIC);
+        } catch (Exception e) {
+            System.err.println("Could not connect to ActiveMQ broker for subscription:");
+            e.printStackTrace();
+        }
     }
 
     private static boolean validateIntersection(String id) {
@@ -67,21 +104,4 @@ public class RoutingServiceApp {
             return false;
         }
     }
-
-    private static int fetchCongestionLevel() {
-        String url = "http://localhost:7022/congestion";
-        try {
-            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(url)).GET().build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() == 200) {
-                CongestionLevel cl = objectMapper.readValue(response.body(), CongestionLevel.class);
-                return cl.level();
-            }
-        } catch (Exception e) {
-            // Default fallback if congestion service is unreachable
-        }
-        return 0;
-    }
 }
-
-// MQ TODO: subscribes to ActiveMQ topic MqConfig.TOPIC at MqConfig.BROKER_URL (see co.wethinkcode.trafficflow.mq.MqConfig)
