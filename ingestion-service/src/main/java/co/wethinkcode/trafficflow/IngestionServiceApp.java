@@ -89,4 +89,30 @@ public class IngestionServiceApp {
 
         return new ArrayList<>(uniqueIntersections.values());
     }
+
+    private static String cleanString(String value) {
+        if (value == null) {
+            return null;
+        }
+        // Trim leading/trailing whitespace and collapse double spaces
+        String cleaned = value.trim().replaceAll("\\s+", " ");
+        if (cleaned.isEmpty() ||
+                cleaned.equalsIgnoreCase("N/A") ||
+                cleaned.equalsIgnoreCase("unknown") ||
+                cleaned.equalsIgnoreCase("TBD") ||
+                cleaned.equals("-") ||
+                cleaned.equalsIgnoreCase("NaN")) {
+            return null;
+        }
+        return cleaned;
+    }
+
+    private static boolean parseBoolean(String value) {
+        if (value == null) return false;
+        String val = value.trim().toLowerCase();
+        return val.equals("y") ||
+                val.equals("yes") ||
+                val.equals("1") ||
+                val.equals("true");
+    }
 }
